@@ -93,6 +93,20 @@ We welcome contributions! Feel free to submit a **pull request** or open an **is
 
 This project is licensed under the **MIT License**. For details, see the [LICENSE](LICENSE) file.
 
+
+---
+
+## 📬 Contact
+
+For any questions or suggestions, feel free to reach out:
+
+- **GitHub**: [obaidullah72](https://github.com/obaidullah72)
+- **LinkedIn**: [obaidullah72](https://www.linkedin.com/in/obaidullah72/)
+
+---
+
+[![Visitor Count](https://visitcount.itsvg.in/api?id=obaidullah72&label=Profile%20Views&color=0&icon=0&pretty=true)](https://visitcount.itsvg.in)
+
 ---
 
 **🏏 Ready to revolutionize indoor cricket scoring? Start using Pavilion Scorefy today!**
