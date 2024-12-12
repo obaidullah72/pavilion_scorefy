@@ -627,7 +627,6 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
     }
 
     _loadPlayers().then((_) {
-      // Once players are loaded, show the player and bowler selection dialog
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _showAddBattersAndBowlerDialog(context, teamA, teamB);
       });
@@ -754,6 +753,7 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
                   ballOutcomes: ballOutcomes,
                 ),
                 ScoreInputWidget(
+                  remainOvers: remainingOvers,
                   onScoreUpdate: (int runs) => _updateScore(runs),
                   onWicketUpdate: (String wicketType) =>
                       _updateWickets(wicketType),
@@ -788,7 +788,7 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
                     });
                   },
                   updateBowlerStats: (bowlerName, runs,
-                      {addBall = true,
+                      {addBall = false,
                         bool isWicket = false,
                         bool isNoBall = false,
                         bool isWide = false,
@@ -806,30 +806,47 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
                             } else {
                               bowler['r'] += runs; // Regular runs
                             }
+                            if (addBall && !isWide && !isNoBall) {
+                              bowler['balls'] = (bowler['balls'] ?? 0) + 1;
 
-                            // Increment ball count and calculate overs
-                            if (addBall) {
-                              bowler['balls'] = (bowler['balls'] ?? 0) + 1; // Increment balls
+                              // Calculate overs in proper cricket format
+                              int totalBalls = bowler['balls'] ?? 0;
+                              int fullOvers = totalBalls ~/ 6; // Full overs
+                              int remainingBalls = totalBalls % 6; // Remaining balls
+                              bowler['o'] = fullOvers + (remainingBalls / 10.0); // Store overs in decimal format
+                            }
+                            // // Handle wides and no-balls
+                            // if (isWide) {
+                            //   bowler['wide'] = (bowler['wide'] ?? 0) + 1; // Increment wides
+                            //   bowler['r'] += 1; // Add extra run for wide
+                            //   continue; // No ball count increment for wides
+                            // }
+                            // if (isNoBall) {
+                            //   bowler['noBalls'] = (bowler['noBalls'] ?? 0) + 1; // Increment no-balls
+                            //   bowler['r'] += 1; // Add extra run for no-ball
+                            //   continue; // No ball count increment for no-balls
+                            // }
 
-                              // Calculate overs (1 over = 6 balls)
-                              int overs = bowler['balls'] ~/ 6; // Whole number of overs
-                              int balls = bowler['balls'] % 6; // Remainder balls
-                              bowler['o'] = overs + balls / 6.0; // Store the over as a decimal (e.g., 1.1, 1.2)
+                            // // Increment ball count only for valid deliveries
+                            // if (addBall) {
+                            //   bowler['balls'] = (bowler['balls'] ?? 0) + 1;
+                            //
+                            //   // Calculate overs in proper cricket format
+                            //   int totalBalls = bowler['balls'] ?? 0;
+                            //   int fullOvers = totalBalls ~/ 6; // Full overs
+                            //   int remainingBalls = totalBalls % 6; // Remaining balls in the current over
+                            //   bowler['o'] = fullOvers + remainingBalls / 6.0; // Store overs as a double
+                            // }
 
-                              // If a no ball is bowled, we count it as a ball, but no over increment
-                              if (isNoBall) {
-                                bowler['noBalls'] = (bowler['noBalls'] ?? 0) + 1;
-                              }
-
-                              // Handle Wicket
-                              if (isWicket) {
-                                bowler['w'] = (bowler['w'] ?? 0) + 1; // Increment wickets
-                              }
+                            // Handle Wicket
+                            if (isWicket) {
+                              bowler['w'] = (bowler['w'] ?? 0) + 1; // Increment wickets
                             }
 
                             // Calculate Economy Rate (runs per over)
-                            if (bowler['o'] > 0) {
-                              bowler['econ'] = bowler['r'] / bowler['o']; // Runs / Overs
+                            int totalBalls = bowler['balls'] ?? 0;
+                            if (totalBalls > 0) {
+                              bowler['econ'] = bowler['r'] / (totalBalls / 6.0); // Runs per over
                             } else {
                               bowler['econ'] = 0.0; // Prevent division by zero
                             }

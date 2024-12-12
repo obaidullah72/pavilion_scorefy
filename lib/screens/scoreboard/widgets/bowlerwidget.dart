@@ -11,48 +11,59 @@ class BowlerWidget extends StatefulWidget {
 
 class _BowlerWidgetState extends State<BowlerWidget> {
 
-  void updateBowlerStats(String bowlerName, int runs,
-      {bool isWicket = false, bool isNoBall = false, bool isWide = false, bool isBoundary = false, bool isSix = false}) {
-    setState(() {
-      for (var bowler in widget.selectedBowlers) {
-        if (bowler['name'] == bowlerName) {
-          if (isWide || isNoBall) {
-            bowler['r'] += runs;
-          } else {
-            bowler['r'] += runs;
-            bowler['balls'] = (bowler['balls'] ?? 0) + 1;
+//   void updateBowlerStats(String bowlerName, int runs,
+//       {bool addBall = true,
+//         bool isWicket = false,
+//         bool isNoBall = false,
+//         bool isWide = false,
+//         bool isBoundary = false,
+//         bool isSix = false}) {
+//     if (widget.selectedBowlers != null) {
+//       setState(() {
+//         for (var bowler in widget.selectedBowlers) {
+//           if (bowler['name'] == bowlerName) {
+//             // Update runs
+//             bowler['r'] += runs;
+//
+// //             // Increment ball count only for valid balls
+// //             if (addBall && !isWide && !isNoBall) {
+// //               bowler['balls'] = (bowler['balls'] ?? 0) + 1;
+// // print(bowler['balls']);
+// //               // Calculate overs
+// //               int totalBalls = bowler['balls'] ?? 0;
+// //               int fullOvers = totalBalls ~/ 6; // Full overs
+// //               int remainingBalls = totalBalls % 6; // Remaining balls
+// //               bowler['o'] = '$fullOvers.$remainingBalls'; // Proper cricket format
+// //             }
+//
+//             // // Update no-balls and wides
+//             // if (isNoBall) {
+//             //   bowler['noBalls'] = (bowler['noBalls'] ?? 0) + 1;
+//             // }
+//             // if (isWide) {
+//             //   bowler['wide'] = (bowler['wide'] ?? 0) + 1;
+//             // }
+//
+//             // Update wickets
+//             if (isWicket) {
+//               bowler['w'] = (bowler['w'] ?? 0) + 1;
+//             }
+//
+//             // Calculate economy rate
+//             int totalBalls = bowler['balls'] ?? 0;
+//             if (totalBalls > 0) {
+//               bowler['econ'] = bowler['r'] / (totalBalls / 6.0); // Runs per over
+//             } else {
+//               bowler['econ'] = 0.0; // Prevent division by zero
+//             }
+//           }
+//         }
+//       });
+//     }
+//   }
 
-            if (isBoundary) {
-              bowler['r'] += 4;
-            }
 
-            if (isSix) {
-              bowler['r'] += 6;
-            }
-          }
 
-          if (isWicket) {
-            bowler['w'] = (bowler['w'] ?? 0) + 1;
-          }
-
-          int balls = bowler['balls'] ?? 0;
-          int overs = balls ~/ 6;
-          int remainderBalls = balls % 6;
-
-          bowler['o'] = overs + (remainderBalls > 0 ? (remainderBalls / 6.0) : 0.0);  // Store overs with decimal value
-          if (bowler['o'] == overs && balls > 0) {
-            bowler['o'] = overs + (balls / 6.0); // Store overs with decimal value
-          }
-
-          if (bowler['o'] > 0) {
-            bowler['econ'] = bowler['r'] / bowler['o']; // Runs / Overs
-          } else {
-            bowler['econ'] = 0.0; // Prevent division by zero
-          }
-        }
-      }
-    });
-  }
 
   @override
   Widget build(BuildContext context) {

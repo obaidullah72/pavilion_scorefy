@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 class ScoreInputWidget extends StatefulWidget {
 
+  final String remainOvers;
   final Function(int) onScoreUpdate;
   final Function(String) onWicketUpdate;
   final Function(int, {bool isWide, bool isNoBall}) onExtrasUpdate;
@@ -19,7 +20,8 @@ class ScoreInputWidget extends StatefulWidget {
     required this.updateBatterStats,
     required this.updateBowlerStats,
     required this.batters,
-    required this.bowlers, // Pass bowlers list
+    required this.bowlers,
+    required this.remainOvers,
   });
 
   @override
@@ -31,12 +33,124 @@ class _ScoreInputWidgetState extends State<ScoreInputWidget> {
   int nonStrikerIndex = 1; // Index for the non-striker
   int currentBowlerIndex = 0;
   final List<String> wicketTypes = ["Caught Out", "LBW", "Run Out", "Bowled"];
+  int ballsCounted = 0;
+  int currentOverBalls = 0;
+  final int ballsPerOver = 6;
+  late int totalOvers; // Total overs in the innings
+
+
+  @override
+  void initState() {
+    super.initState();
+    totalOvers = int.tryParse(widget.remainOvers) ?? 0; // Parse total overs
+  }
+
+  void _addBallToOver() {
+    setState(() {
+      currentOverBalls++;
+      ballsCounted++;
+
+      // Update bowler stats for a valid ball
+      final bowlerName = widget.bowlers[currentBowlerIndex]['name'];
+      widget.updateBowlerStats(
+        bowlerName,
+        0, // No runs directly from the ball count
+        addBall: false,
+      );
+
+      if (currentOverBalls == ballsPerOver) {
+        _endOver();
+      }
+
+      if (_getRemainingBalls() <= 0) {
+        _showInningsEndDialog(context);
+      }
+    });
+  }
+
+  // Function to handle the end of an over
+  void _endOver() {
+    setState(() {
+      currentOverBalls = 0; // Reset the over ball count
+      _showEndOverDialog(context);
+    });
+  }
+
+  int _getRemainingBalls() {
+    int totalBalls = totalOvers * ballsPerOver;
+    return totalBalls - ballsCounted;
+  }
+
+  String _getRemainingOvers() {
+    int remainingBalls = _getRemainingBalls();
+    int overs = remainingBalls ~/ ballsPerOver; // Full overs left
+    int balls = remainingBalls % ballsPerOver; // Remaining balls
+    return "$overs.$balls";
+  }
+  void _showEndOverDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          backgroundColor: Colors.green,
+          title: const Text(
+            'End of Over',
+            style: TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+              fontSize: 20,
+            ),
+          ),
+          content: const Text(
+            'The over has ended. Select the next bowler.',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 16,
+            ),
+          ),
+          actions: [
+            TextButton(
+              style: TextButton.styleFrom(
+                backgroundColor: Colors.white,
+                foregroundColor: Colors.green,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20)),
+              ),
+              onPressed: () {
+                Navigator.of(context).pop();
+                // Logic to select a new bowler (if required)
+              },
+              child: const Text(
+                'OK',
+                style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
 
 
   @override
   Widget build(BuildContext context) {
     return Column(
       children: [
+        Text(
+          "Remaining Overs: ${_getRemainingOvers()}",
+          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+        ),
+        // Text(
+        //   "Balls Bowled: $ballsCounted",
+        //   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+        // ),
+        // Text(
+        //   "Current Over: $currentOverBalls.$ballsPerOver",
+        //   style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        // ),
         // Text(
         //   "Striker: ${widget.batters[strikerIndex]['name'] ?? 'No Striker'}",
         //   style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
@@ -116,6 +230,7 @@ class _ScoreInputWidgetState extends State<ScoreInputWidget> {
             isSix: isSix,
           );
           widget.updateBowlerStats(
+            addBall: true,
               bowlerName,
               runs, // Runs scored
               isWicket: isWicket, // Is it a wicket?
@@ -127,6 +242,10 @@ class _ScoreInputWidgetState extends State<ScoreInputWidget> {
           if (runs % 2 != 0) {
             _swapStrikers(); // Swap strikers for odd runs
           }
+        }
+        // Add ball for valid deliveries (not wide or no-ball)
+        if (!isExtra || (!isWide && !isNoBall)) {
+          _addBallToOver();
         }
 
         // Track the number of balls bowled in the over
