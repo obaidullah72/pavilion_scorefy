@@ -21,7 +21,7 @@ class _ManageTeamsScreenState extends State<ManageTeamsScreen> {
 
   // Fetch teams from the database
   void _fetchTeams() async {
-    final dbHelper = DatabaseHelper.instance;
+    final dbHelper = DatabaseHelper();
     try {
       List<Team> fetchedTeams = await dbHelper.getAllTeams();
       for (var team in fetchedTeams) {
@@ -39,7 +39,7 @@ class _ManageTeamsScreenState extends State<ManageTeamsScreen> {
   }
 
   void _deleteTeam(int index) async {
-    final dbHelper = DatabaseHelper.instance;
+    final dbHelper = DatabaseHelper();
     try {
       // Step 1: Fetch all players of the team before deletion
       List<Player> players = await dbHelper.getPlayersByTeamId(teams[index].id!);

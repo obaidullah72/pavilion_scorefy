@@ -47,7 +47,7 @@ class PlayerSearchList extends StatelessWidget {
                     return;
                   }
 
-                  final dbHelper = DatabaseHelper.instance;
+                  final dbHelper = DatabaseHelper();
 
                   try {
                     // bool playerExists = await dbHelper.isPlayerInTeam(teamid!, player.id!);
@@ -82,7 +82,7 @@ class PlayerSearchList extends StatelessWidget {
   }
 
   Future<List<Player>> _fetchAvailablePlayers() async {
-    final dbHelper = DatabaseHelper.instance;
+    final dbHelper = DatabaseHelper();
     return await dbHelper.getAvailablePlayers();
   }
 }

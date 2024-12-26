@@ -63,7 +63,7 @@ class _ScoreInputWidgetState extends State<ScoreInputWidget> {
       }
 
       if (_getRemainingBalls() <= 0) {
-        _showInningsEndDialog(context);
+        // _showInningsEndDialog(context);
       }
     });
   }
@@ -72,7 +72,7 @@ class _ScoreInputWidgetState extends State<ScoreInputWidget> {
   void _endOver() {
     setState(() {
       currentOverBalls = 0; // Reset the over ball count
-      _showEndOverDialog(context);
+      // _showEndOverDialog(context);
     });
   }
 
@@ -87,52 +87,52 @@ class _ScoreInputWidgetState extends State<ScoreInputWidget> {
     int balls = remainingBalls % ballsPerOver; // Remaining balls
     return "$overs.$balls";
   }
-  void _showEndOverDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
-          backgroundColor: Colors.green,
-          title: const Text(
-            'End of Over',
-            style: TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-              fontSize: 20,
-            ),
-          ),
-          content: const Text(
-            'The over has ended. Select the next bowler.',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 16,
-            ),
-          ),
-          actions: [
-            TextButton(
-              style: TextButton.styleFrom(
-                backgroundColor: Colors.white,
-                foregroundColor: Colors.green,
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(20)),
-              ),
-              onPressed: () {
-                Navigator.of(context).pop();
-                // Logic to select a new bowler (if required)
-              },
-              child: const Text(
-                'OK',
-                style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold),
-              ),
-            ),
-          ],
-        );
-      },
-    );
-  }
+  // void _showEndOverDialog(BuildContext context) {
+  //   showDialog(
+  //     context: context,
+  //     builder: (BuildContext context) {
+  //       return AlertDialog(
+  //         shape: RoundedRectangleBorder(
+  //           borderRadius: BorderRadius.circular(20),
+  //         ),
+  //         backgroundColor: Colors.green,
+  //         title: const Text(
+  //           'End of Over',
+  //           style: TextStyle(
+  //             color: Colors.white,
+  //             fontWeight: FontWeight.bold,
+  //             fontSize: 20,
+  //           ),
+  //         ),
+  //         content: const Text(
+  //           'The over has ended. Select the next bowler.',
+  //           style: TextStyle(
+  //             color: Colors.white,
+  //             fontSize: 16,
+  //           ),
+  //         ),
+  //         actions: [
+  //           TextButton(
+  //             style: TextButton.styleFrom(
+  //               backgroundColor: Colors.white,
+  //               foregroundColor: Colors.green,
+  //               shape: RoundedRectangleBorder(
+  //                   borderRadius: BorderRadius.circular(20)),
+  //             ),
+  //             onPressed: () {
+  //               Navigator.of(context).pop();
+  //               // Logic to select a new bowler (if required)
+  //             },
+  //             child: const Text(
+  //               'OK',
+  //               style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold),
+  //             ),
+  //           ),
+  //         ],
+  //       );
+  //     },
+  //   );
+  // }
 
 
   @override

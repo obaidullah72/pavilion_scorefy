@@ -1,8 +1,12 @@
+import 'dart:convert';
+
 import 'package:path/path.dart';
 import 'package:pavilion_scorefy/database/players_model.dart';
 import 'package:pavilion_scorefy/database/team_model.dart';
 import 'package:pavilion_scorefy/database/team_points.dart';
 import 'package:sqflite/sqflite.dart';
+
+import 'match_model.dart';
 
 class DatabaseHelper {
   static final _databaseName = "pavilion_scorefy.db";
@@ -21,11 +25,21 @@ class DatabaseHelper {
   static final columnPlayerId = 'player_id'; // Player ID in the junction table
 
   // Singleton pattern
-  DatabaseHelper._privateConstructor();
+  DatabaseHelper.internal();
 
-  static final DatabaseHelper instance = DatabaseHelper._privateConstructor();
+  // factory DatabaseHelper() => _instance;
 
+  // static final DatabaseHelper instance = DatabaseHelper.internal();
+  static final DatabaseHelper _instance = DatabaseHelper._internal();
   static Database? _database;
+
+  // Private constructor
+  DatabaseHelper._internal();
+
+  // Factory constructor
+  factory DatabaseHelper() => _instance;
+
+  // static Database? _database;
 
   // Getter for database instance, initializes it if null
   Future<Database> get database async {
@@ -75,6 +89,36 @@ class DatabaseHelper {
     )
   ''');
 
+    await db.execute('''
+  CREATE TABLE matches (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    teamA TEXT,
+    teamB TEXT,
+    overs INTEGER,
+    players INTEGER,
+    score INTEGER,
+    wickets INTEGER,
+    extras INTEGER,
+    batters TEXT,
+    bowlers TEXT,
+    ismatchongoing INTEGER
+  )
+''');
+
+    await db.execute('''
+          CREATE TABLE player_stats (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            matchId INTEGER,
+            name TEXT,
+            runs INTEGER,
+            balls INTEGER,
+            fours INTEGER,
+            sixes INTEGER,
+            strikeRate REAL,
+            FOREIGN KEY (matchId) REFERENCES matches(id)
+          )
+        ''');
+
     // Create teams table
     await db.execute('''
       CREATE TABLE $tableTeams (
@@ -112,9 +156,86 @@ class DatabaseHelper {
     print("Tables created successfully!");
   }
 
+  Future<void> insertMatch(MatchModel match) async {
+    final db = await database;
+    await db.insert('matches', match.toMap());
+  }
+
+  Future<MatchModel?> fetchOngoingMatch() async {
+    final db = await database;
+    final maps = await db.query(
+      'matches',
+      where: 'isMatchOngoing = ?',
+      whereArgs: [1],
+    );
+    if (maps.isNotEmpty) {
+      return MatchModel.fromMap(maps.first);
+    }
+    return null;
+  }
+
+  Future<void> updateMatch(MatchModel match) async {
+    final db = await database;
+    await db.update(
+      'matches',
+      match.toMap(),
+      where: 'id = ?',
+      whereArgs: [match.id],
+    );
+  }
+
+// Save match data into the database
+  Future<int> saveMatchData(Map<String, dynamic> matchData) async {
+    Database db = await database;
+
+    // Check if match is ongoing or not, and update accordingly
+    bool isMatchOngoing = true; // Match is ongoing if currentInning is 1 or less
+
+    // Add or update the isMatchOngoing field in match data
+    matchData['ismatchongoing'] = isMatchOngoing;
+
+    return await db.insert('matches', matchData,
+        conflictAlgorithm: ConflictAlgorithm.replace);
+  }
+
+// Fetch match data from the database
+  Future<List<Map<String, dynamic>>> fetchMatchData() async {
+    Database db = await database;
+    return await db.query('matches');
+  }
+
+  List<Map<String, dynamic>> _parsePlayerStats(String stats) {
+    return List<Map<String, dynamic>>.from(json.decode(stats));
+  }
+
+  // Fetch match by id
+  Future<Map<String, dynamic>?> fetchMatchById(int id) async {
+    Database db = await database;
+    var result =
+        await db.query('matches', where: '$columnId = ?', whereArgs: [id]);
+
+    if (result.isNotEmpty) {
+      return Map<String, dynamic>.from(
+          result.first); // Ensure casting to Map<String, dynamic>
+    } else {
+      return null; // Return null if no match is found
+    }
+  }
+
+  // Future<List<Map<String, dynamic>>> fetchOngoingMatch() async {
+  //   final db = await database;
+  //   return await db.query('match_data', where: "match_status = ?", whereArgs: ["ongoing"]);
+  // }
+
+  Future<int> updateMatchData(int id, Map<String, dynamic> updatedData) async {
+    final db = await database;
+    return await db
+        .update('match_data', updatedData, where: "id = ?", whereArgs: [id]);
+  }
+
   // Inserting a player with stats
   Future<int> insertPlayer(Player player) async {
-    Database db = await instance.database;
+    Database db = await DatabaseHelper().database;
 
     // Use player properties to insert them into the table
     return await db.insert('players', {
@@ -134,13 +255,13 @@ class DatabaseHelper {
 
   // Insert a new team into the database
   Future<int> insertTeam(Team team) async {
-    Database db = await instance.database;
+    Database db = await DatabaseHelper().database;
     return await db.insert(tableTeams, team.toMap());
   }
 
   // Insert a new team-player relationship into the junction table
   Future<int> insertTeamPlayer(int teamId, int playerId) async {
-    Database db = await instance.database;
+    Database db = await DatabaseHelper().database;
     return await db.insert(tableTeamPlayers, {
       columnTeamId: teamId,
       columnPlayerId: playerId,
@@ -150,7 +271,7 @@ class DatabaseHelper {
   // Insert team performance data into team_points table
   Future<int> insertTeamPoints(int teamId, int matches, int won, int lost,
       int tied, double winPercentage) async {
-    Database db = await instance.database;
+    Database db = await DatabaseHelper().database;
     return await db.insert('team_points', {
       'team_id': teamId,
       'matches': matches,
@@ -162,7 +283,7 @@ class DatabaseHelper {
   }
 
   Future<bool> isPlayerInTeam(int teamId, int playerId) async {
-    final db = await instance.database;
+    final db = await DatabaseHelper().database;
     final result = await db.query(
       'team_players',
       where: 'team_id = ? AND player_id = ?',
@@ -172,7 +293,7 @@ class DatabaseHelper {
   }
 
   Future<int> updatePlayerAvailability(Player player) async {
-    final db = await instance.database;
+    final db = await DatabaseHelper().database;
     return await db.update(
       'players',
       {'isAvailable': player.isAvailable! ? 1 : 0},
@@ -182,10 +303,11 @@ class DatabaseHelper {
   }
 
   Future<void> updateTeamPoints(int teamId, bool isWin, bool isTie) async {
-    final db = await instance.database;
+    final db = await DatabaseHelper().database;
 
     // Retrieve current stats for the team
-    var result = await db.query('team_points', where: 'team_id = ?', whereArgs: [teamId]);
+    var result = await db
+        .query('team_points', where: 'team_id = ?', whereArgs: [teamId]);
     if (result.isNotEmpty) {
       // If team data exists, update it
       var currentStats = result.first;
@@ -193,25 +315,38 @@ class DatabaseHelper {
       // Cast values to int and use null-aware operator (??)
       int matches = ((currentStats['matches'] as int?) ?? 0) + 1;
       int won = ((currentStats['won'] as int?) ?? 0) + (isWin ? 1 : 0);
-      int lost = ((currentStats['lost'] as int?) ?? 0) + (isWin ? 0 : !isTie ? 1 : 0);
+      int lost = ((currentStats['lost'] as int?) ?? 0) +
+          (isWin
+              ? 0
+              : !isTie
+                  ? 1
+                  : 0);
       int tied = ((currentStats['tied'] as int?) ?? 0) + (isTie ? 1 : 0);
 
       double winPercentage = (matches > 0) ? (won / matches) * 100 : 0.0;
 
-      await db.update('team_points', {
-        'matches': matches,
-        'won': won,
-        'lost': lost,
-        'tied': tied,
-        'winPercentage': winPercentage,
-      }, where: 'team_id = ?', whereArgs: [teamId]);
+      await db.update(
+          'team_points',
+          {
+            'matches': matches,
+            'won': won,
+            'lost': lost,
+            'tied': tied,
+            'winPercentage': winPercentage,
+          },
+          where: 'team_id = ?',
+          whereArgs: [teamId]);
     } else {
       // If no data exists for the team, insert new record
       await db.insert('team_points', {
         'team_id': teamId,
         'matches': 1,
         'won': isWin ? 1 : 0,
-        'lost': isWin ? 0 : !isTie ? 1 : 0,
+        'lost': isWin
+            ? 0
+            : !isTie
+                ? 1
+                : 0,
         'tied': isTie ? 1 : 0,
         'winPercentage': isWin ? 100 : 0,
       });
@@ -220,7 +355,8 @@ class DatabaseHelper {
 
   Future<List<Map<String, dynamic>>> getAllPlayers() async {
     final db = await database; // Access your SQLite database
-    return await db.query('players'); // Replace 'players' with your actual table name
+    return await db
+        .query('players'); // Replace 'players' with your actual table name
   }
 
   // Update match outcome in the database
@@ -262,9 +398,10 @@ class DatabaseHelper {
         return;
     }
   }
+
   // Fetch the team by name
   Future<Team> getTeamByName(String teamName) async {
-    var db = await instance.database;
+    var db = await DatabaseHelper().database;
     var result = await db.query(
       'teams',
       where: 'name = ?',
@@ -275,7 +412,7 @@ class DatabaseHelper {
 
 // Fetch team points by team ID
   Future<TeamPoint> getTeamPointsByTeamId(int teamId) async {
-    var db = await instance.database;
+    var db = await DatabaseHelper().database;
     var result = await db.query(
       'team_points',
       where: 'team_id = ?',
@@ -285,7 +422,8 @@ class DatabaseHelper {
   }
 
   Future<List<Map<String, dynamic>>> getAllTeamsWithPerformance() async {
-    final db = await instance.database; // Assuming you have a database instance
+    final db = await DatabaseHelper()
+        .database; // Assuming you have a database instance
 
     // Sample SQL query to join teams and performance data
     String query = '''
@@ -301,7 +439,7 @@ class DatabaseHelper {
 
 // Update team points in the database
 //   Future<void> updateTeamPoints(int teamId, int matches, int won, int lost, int tied, double winPercentage) async {
-//     var db = await instance.database;
+//     var db = await DatabaseHelper().database;
 //     await db.update(
 //       'team_points',
 //       {
@@ -315,7 +453,6 @@ class DatabaseHelper {
 //       whereArgs: [teamId],
 //     );
 //   }
-
 
 // Increment match stats for a team
   Future<void> _incrementTeamStats(int teamId,
@@ -364,7 +501,7 @@ class DatabaseHelper {
   }
 
   Future<void> addPlayerToTeam(int teamId, List<int> playerIds) async {
-    Database db = await instance.database;
+    Database db = await DatabaseHelper().database;
     Batch batch = db.batch();
 
     for (var playerId in playerIds) {
@@ -377,9 +514,8 @@ class DatabaseHelper {
     await batch.commit(noResult: true);
   }
 
-
   Future<List<Player>> getAvailablePlayers() async {
-    final db = await instance.database;
+    final db = await DatabaseHelper().database;
     final List<Map<String, dynamic>> result = await db.query(
       'players',
       where: 'isAvailable = ?',
@@ -391,7 +527,7 @@ class DatabaseHelper {
 
   // Get players by team ID
   Future<List<Player>> getPlayersByTeamId(int teamId) async {
-    Database db = await instance.database;
+    Database db = await DatabaseHelper().database;
 
     final List<Map<String, dynamic>> maps = await db.rawQuery('''
       SELECT p.* FROM $tablePlayers p
@@ -406,7 +542,7 @@ class DatabaseHelper {
 
   // Get teams by player ID
   Future<List<Team>> getTeamsByPlayerId(int playerId) async {
-    Database db = await instance.database;
+    Database db = await DatabaseHelper().database;
 
     final List<Map<String, dynamic>> maps = await db.rawQuery('''
       SELECT t.* FROM $tableTeams t
@@ -419,7 +555,7 @@ class DatabaseHelper {
 
   // Get player by ID
   Future<Player?> getPlayer(int id) async {
-    Database db = await instance.database;
+    Database db = await DatabaseHelper().database;
     var result =
         await db.query(tablePlayers, where: '$columnId = ?', whereArgs: [id]);
     return result.isNotEmpty ? Player.fromMap(result.first) : null;
@@ -427,7 +563,7 @@ class DatabaseHelper {
 
   // Get team by ID
   Future<Team?> getTeam(int id) async {
-    Database db = await instance.database;
+    Database db = await DatabaseHelper().database;
     var result =
         await db.query(tableTeams, where: '$columnId = ?', whereArgs: [id]);
     return result.isNotEmpty ? Team.fromMap(result.first) : null;
@@ -459,7 +595,7 @@ class DatabaseHelper {
 
   // Fetch team performance stats from team_points table
   Future<Map<String, dynamic>> getTeamPerformance(int teamId) async {
-    Database db = await instance.database;
+    Database db = await DatabaseHelper().database;
     List<Map<String, dynamic>> result = await db.query(
       'team_points',
       where: 'team_id = ?',
@@ -484,7 +620,7 @@ class DatabaseHelper {
 
   // Get team information along with performance stats
   Future<Map<String, dynamic>> getTeamWithPerformance(int teamId) async {
-    Database db = await instance.database;
+    Database db = await DatabaseHelper().database;
 
     // Fetch team details
     List<Map<String, dynamic>> teamDetails = await db.query(
@@ -512,7 +648,7 @@ class DatabaseHelper {
 
   // Fetch all teams from the database
   Future<List<Team>> getAllTeams() async {
-    Database db = await instance.database;
+    Database db = await DatabaseHelper().database;
     final List<Map<String, dynamic>> maps = await db.query(tableTeams);
 
     List<Team> teams = [];
@@ -524,7 +660,7 @@ class DatabaseHelper {
 
   // Update an existing team
   Future<int> updateTeam(Team team) async {
-    Database db = await instance.database;
+    Database db = await DatabaseHelper().database;
     return await db.update(
       tableTeams,
       team.toMap(),
@@ -535,7 +671,7 @@ class DatabaseHelper {
 
   // Delete player by ID
   Future<void> deletePlayer(int id) async {
-    Database db = await instance.database;
+    Database db = await DatabaseHelper().database;
     await db.delete(
       tablePlayers,
       where: '$columnId = ?',
@@ -545,7 +681,7 @@ class DatabaseHelper {
 
   // Delete team by ID
   Future<int> deleteTeam(int id) async {
-    Database db = await instance.database;
+    Database db = await DatabaseHelper().database;
     return await db.delete(
       tableTeams,
       where: '$columnId = ?',
@@ -553,11 +689,10 @@ class DatabaseHelper {
     );
   }
 
-
   // Fetch players by team name
   Future<List<Player>> getPlayersByTeamName(String teamName) async {
     try {
-      Database db = await instance.database;
+      Database db = await DatabaseHelper().database;
 
       // First, get the team ID using the team name
       final List<Map<String, dynamic>> teamMaps = await db.query(
@@ -587,7 +722,6 @@ class DatabaseHelper {
     }
   }
 
-
   Future<List<String>> fetchPlayersFromTeam(String teamName) async {
     final db = await database;
     final List<Map<String, dynamic>> maps = await db.query(
@@ -600,7 +734,7 @@ class DatabaseHelper {
 
   Future<List<Map<String, dynamic>>> getPlayersWithStatsByTeamId(
       int teamId) async {
-    Database db = await instance.database;
+    Database db = await DatabaseHelper().database;
 
     // Join the players table with the team_players junction table and the team_points table to get player stats
     List<Map<String, dynamic>> result = await db.rawQuery('''
@@ -653,7 +787,7 @@ class DatabaseHelper {
   // }
 
   Future<int> deleteTeamPlayer(int teamId, int playerId) async {
-    Database db = await instance.database;
+    Database db = await DatabaseHelper().database;
     return await db.delete(
       tableTeamPlayers,
       where: '$columnTeamId = ? AND $columnPlayerId = ?',

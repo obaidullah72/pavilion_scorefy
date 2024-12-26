@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:pavilion_scorefy/database/match_model.dart';
 import 'package:pavilion_scorefy/screens/create_match.dart';
 import 'package:pavilion_scorefy/screens/manage_your_players.dart';
 import 'package:pavilion_scorefy/screens/manage_your_teams.dart';
@@ -8,6 +9,7 @@ import 'package:pavilion_scorefy/screens/scoreboard/score_board.dart';
 import 'package:pavilion_scorefy/screens/teams/standings/team_standings.dart';
 import 'package:pavilion_scorefy/screens/widget/datadialog.dart';
 
+import '../database/db_helper.dart';
 import '../database/players_model.dart';
 import '../database/scoreboard_model.dart';
 
@@ -19,7 +21,49 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  MatchModel? ongoingMatch;
   bool isMatchOngoing = false;
+
+
+  @override
+  void initState() {
+    // TODO: implement initState
+    super.initState();
+    _loadOngoingMatch();
+  }
+
+  Future<void> _loadOngoingMatch() async {
+    final match = await DatabaseHelper().fetchOngoingMatch();
+    if (match != null) {
+      setState(() {
+        isMatchOngoing = true;
+        ongoingMatch = match;
+      });
+    }
+  }
+
+  void _resumeMatch() {
+    if (ongoingMatch != null) {
+      // Navigate to Scoreboard screen with match data
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => ScoreboardScreen(
+            data: ScoreboardScreenData(
+              teamA: ongoingMatch!.teamA,
+              teamB: ongoingMatch!.teamB,
+              overs: ongoingMatch!.overs,
+              players: 11, // Adjust dynamically
+              teamALogo: 'assets/logo.png',
+              teamBLogo: 'assets/logo.png',
+              playersTeamA: [], // Fetch from DB
+              playersTeamB: [], // Fetch from DB
+            ),
+          ),
+        ),
+      );
+    }
+  }
 
   List<Player> playersTeamA = [
     Player(id: 1, name: 'Player A1', isAvailable: false),
@@ -72,25 +116,7 @@ class _HomeScreenState extends State<HomeScreen> {
               // Conditional button for "Resume Match" or "New Match"
               isMatchOngoing
                   ? ElevatedButton(
-                onPressed: () {
-                  ScoreboardScreenData data = ScoreboardScreenData(
-                    teamA: 'Team A',
-                    teamB: 'Team B',
-                    overs: 20,
-                    players: 11,
-                    teamALogo: 'assets/logo.png',
-                    teamBLogo: 'assets/logo.png',
-                    playersTeamA: playersTeamA,
-                    playersTeamB: playersTeamB,
-                  );
-
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => ScoreboardScreen(data: data, ),
-                    ),
-                  );
-                },
+                onPressed: () => _resumeMatch(),
                 style: ElevatedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(
                       vertical: 16, horizontal: 100),

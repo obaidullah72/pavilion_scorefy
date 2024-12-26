@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:pavilion_scorefy/screens/home_screen.dart';
@@ -48,7 +49,7 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
   }
 
   void endMatch(String teamA, String teamB, String outcome) async {
-    final dbHelper = DatabaseHelper.instance;
+    final dbHelper = DatabaseHelper();
 
     await dbHelper.updateMatchOutcome(teamA, teamB, outcome);
 
@@ -60,7 +61,7 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
     final result = await showDialog<Map<String, String?>>(
       context: context,
       builder: (context) => SelectBattersAndBowlerDialog(
-        database: DatabaseHelper.instance,
+        database: DatabaseHelper(),
         teamA: battingTeam,
         teamB: bowlingTeam,
         onPlayersSelected: (selectedBatters, selectedBowlers) {
@@ -170,10 +171,10 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
     bool isTie = teamAWins == teamBWins;
 
     // Update team points for Team A
-    DatabaseHelper.instance.updateTeamPoints(teamAId, isTeamAWin, isTie);
+    DatabaseHelper().updateTeamPoints(teamAId, isTeamAWin, isTie);
 
     // Update team points for Team B
-    DatabaseHelper.instance.updateTeamPoints(teamBId, !isTeamAWin, isTie);
+    DatabaseHelper().updateTeamPoints(teamBId, !isTeamAWin, isTie);
 
     // Navigate to Home Page
     Navigator.of(context).pop(); // Close current screen
@@ -226,6 +227,21 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
   String? selectedBatter2;
   String? selectedBowler;
 
+
+  // Function to simulate updating match in the database
+  Future<void> updateMatchInDatabase() async {
+    // Simulate the database update (Replace with actual DB logic)
+    await Future.delayed(Duration(seconds: 5));
+
+    // Once the match is updated, show a SnackBar
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Match has been updated in the database'),
+        duration: Duration(seconds: 5),
+        backgroundColor: Colors.green,
+      ),
+    );
+  }
   void _updateBalls({bool countBall = true}) {
     if (countBall) {
       setState(() {
@@ -309,22 +325,26 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
             isWicket: false); // No change for wickets
       }
     });
+
+    // _saveMatchData();
+
   }
 
-  void _updateScore(int runs) {
-    setState(() {
-      score += runs;
-      ballOutcomes.add(runs);
-      _updateBalls();
+    void _updateScore(int runs) {
+      setState(() {
+        score += runs;
+        ballOutcomes.add(runs);
+        _updateBalls();
 
-      // Update batsman stats
-      if (selectedBatter1 != null) {
-        _updateBatterStats(selectedBatter1!, runs);
-      }
+        // Update batsman stats
+        if (selectedBatter1 != null) {
+          _updateBatterStats(selectedBatter1!, runs);
+        }
 
-      _checkTargetReached();
-    });
-  }
+        _checkTargetReached();
+      });
+      // _saveMatchData();
+    }
 
   void _updateWickets(String wicketType) {
     setState(() {
@@ -471,8 +491,11 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
               Navigator.of(context).pop();
               if (currentInning == 1) {
                 _resetInnings(); // Prepare for next innings
+                _endOver(score);
+                // _saveMatchData();
               } else {
                 _showMatchEndDialog(); // End the match after second innings
+                _saveMatchData();
               }
             },
             child: Text(
@@ -484,6 +507,19 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
       ),
     );
   }
+  void _endOver(int runs) {
+    // Assuming you want to calculate the total runs for the over
+
+    // Update the score with the calculated over runs
+    _updateScore(runs);
+
+    // After updating the score, save the match data
+    _saveMatchData();
+  }
+
+  bool isMatchOngoing = false;
+
+
 
   void _showMatchEndDialog() {
     String matchResult;
@@ -572,6 +608,72 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
     });
   }
 
+  void _saveMatchData() {
+    try {
+      final matchData = {
+        'teamA': teamA,
+        'teamB': teamB,
+        'overs': overs,
+        'players': players,
+        'score': targetScore,
+        'wickets': wickets,
+        'extras': extras,
+        'batters': batters.toString(),
+        'bowlers': bowlers.toString(),
+      };
+      // int scoreruns = targetScore - 1;
+      // Print the match data to the console
+      print("Saving Match Data: ");
+      print("Team A: $teamA");
+      print("Team B: $teamB");
+      print("Overs: $overs");
+      print("Players: $players");
+      print("Target: $targetScore");
+      print("Wickets: $wickets");
+      print("Extras: $extras");
+      print("Batters: ${batters.toString()}");
+      print("Bowlers: ${bowlers.toString()}");
+
+      DatabaseHelper().saveMatchData(matchData).then((id) {
+        print("Match saved with id $id");
+      });
+    } catch (e) {
+      print("Error saving match data: $e");
+    }
+  }
+
+
+  Future<void> _loadMatchData() async {
+    try {
+      List<Map<String, dynamic>> matchList = await DatabaseHelper().fetchMatchData();
+      if (matchList.isNotEmpty) {
+        var match = matchList.first;
+        setState(() {
+          // Load match data from the fetched list
+          teamA = match['teamA'];
+          teamB = match['teamB'];
+          overs = match['overs'];
+          players = match['players'];
+          score = match['score'];
+          wickets = match['wickets'];
+          extras = match['extras'];
+          batters = _parsePlayerStats(match['batters']);
+          bowlers = _parsePlayerStats(match['bowlers']);
+          isMatchOngoing = match['ismatchongoing']; // Load match ongoing status
+        });
+      }
+    } catch (e) {
+      print("Error loading match data: $e");
+    }
+  }
+
+
+  List<Map<String, dynamic>> _parsePlayerStats(String stats) {
+    // Convert the stored player stats back from String to a list of maps if stored as JSON
+    return List<Map<String, dynamic>>.from(json.decode(stats));
+  }
+
+
   Future<void> _loadPlayers() async {
     try {
       // Check if database or team names are null
@@ -608,6 +710,7 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
   @override
   void initState() {
     super.initState();
+    _loadMatchData();
     teamA = widget.data.teamA;
     teamB = widget.data.teamB;
     overs = widget.data.overs;
@@ -621,6 +724,9 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
     teamBPlayers = [];
     batters = widget.initialBatters ?? [];
     bowlers = widget.initialBowlers ?? [];
+
+    // Call update function when match starts
+    updateMatchInDatabase();
 
     if (remainingPlayers == 1) {
       _endInnings();

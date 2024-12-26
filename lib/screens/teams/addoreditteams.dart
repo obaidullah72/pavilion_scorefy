@@ -22,7 +22,6 @@ class _AddEditTeamScreenState extends State<AddEditTeamScreen> {
   void initState() {
     super.initState();
     if (widget.team != null) {
-      // If editing, pre-fill the team data
       _teamNameController.text = widget.team!.teamName;
       _logoPath = widget.team!.logo;
     }
@@ -54,7 +53,7 @@ class _AddEditTeamScreenState extends State<AddEditTeamScreen> {
 
     if (widget.team == null) {
       // Insert new team
-      await DatabaseHelper.instance.insertTeam(newTeam);
+      await DatabaseHelper().insertTeam(newTeam);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
@@ -79,7 +78,7 @@ class _AddEditTeamScreenState extends State<AddEditTeamScreen> {
         ),
       );
       newTeam.id = widget.team!.id;
-      await DatabaseHelper.instance.updateTeam(newTeam);
+      await DatabaseHelper().updateTeam(newTeam);
       print('Team Updated');
 
     }

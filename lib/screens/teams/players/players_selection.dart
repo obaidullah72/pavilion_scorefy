@@ -36,7 +36,7 @@ class _PlayerSelectionScreenState extends State<PlayerSelectionScreen> {
   }
 
   void _fetchPlayers() async {
-    final dbHelper = DatabaseHelper.instance;
+    final dbHelper = DatabaseHelper();
     if (widget.teamid != null) {
       List<Player> fetchedPlayers = await dbHelper.getPlayersByTeamId(widget.teamid!);
       setState(() {
@@ -46,7 +46,7 @@ class _PlayerSelectionScreenState extends State<PlayerSelectionScreen> {
   }
 
   void _fetchTeamLogo() async {
-    final dbHelper = DatabaseHelper.instance;
+    final dbHelper = DatabaseHelper();
     Team? team = await dbHelper.getTeam(widget.teamid!);
     setState(() {
       teamLogoUrl = team?.logo;
@@ -59,13 +59,13 @@ class _PlayerSelectionScreenState extends State<PlayerSelectionScreen> {
   }
 
   void _addPlayerToTeam(Player player) async {
-    final dbHelper = DatabaseHelper.instance;
+    final dbHelper = DatabaseHelper();
 
     try {
       bool playerExists = await dbHelper.isPlayerInTeam(widget.teamid!, player.id!);
       if (playerExists) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('${player.name} is already in the team!')),
+          SnackBar(content: Text('${player.name} is already in the team!'), duration: Duration(milliseconds: 100,),),
         );
         return;
       }

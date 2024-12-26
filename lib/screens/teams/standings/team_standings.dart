@@ -13,7 +13,7 @@ class _TeamStandingsScreenState extends State<TeamStandingsScreen> {
   int sortColumnIndex = 0;
 
   Future<void> _loadTeamPerformance() async {
-    List<Map<String, dynamic>> teamStats = await DatabaseHelper.instance.getAllTeamsWithPerformance();
+    List<Map<String, dynamic>> teamStats = await DatabaseHelper().getAllTeamsWithPerformance();
     setState(() {
       teamsPerformance = teamStats;
     });

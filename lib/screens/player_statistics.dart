@@ -18,7 +18,7 @@ class _PlayerStatisticsScreenState extends State<PlayerStatisticsScreen> {
 
   Future<List<Player>> fetchPlayers() async {
     // Fetch all players from the database
-    var data = await DatabaseHelper.instance.getAllPlayers();
+    var data = await DatabaseHelper().getAllPlayers();
     print("Fetched Players: $data"); // Debugging line
     return data.map((player) {
       return Player.fromMap(player); // Convert the Map to Player

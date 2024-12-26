@@ -26,7 +26,7 @@ class _CreateMatchScreenState extends State<CreateMatchScreen> {
   }
 
   void _fetchTeams() async {
-    final dbHelper = DatabaseHelper.instance;
+    final dbHelper = DatabaseHelper();
     try {
       List<Team> fetchedTeams = await dbHelper.getAllTeams();
       setState(() {
@@ -185,7 +185,7 @@ class _CreateMatchScreenState extends State<CreateMatchScreen> {
                         .firstWhere((team) => team.teamName == selectedTeamB);
 
                     if (teamA.id != null && teamB.id != null) {
-                      final dbHelper = DatabaseHelper.instance;
+                      final dbHelper = DatabaseHelper();
                       final playersTeamA = await dbHelper.getPlayersByTeamId(
                           teamA.id!); // Force unwrap since it's checked
                       final playersTeamB = await dbHelper.getPlayersByTeamId(
@@ -195,7 +195,7 @@ class _CreateMatchScreenState extends State<CreateMatchScreen> {
                         context,
                         MaterialPageRoute(
                           builder: (context) => ScoreboardScreen(
-                            database: DatabaseHelper.instance,
+                            database: DatabaseHelper(),
                             data: ScoreboardScreenData(
                               teamA: selectedTeamA!,
                               teamB: selectedTeamB!,

@@ -31,13 +31,13 @@ class _ManagePlayersScreenState extends State<ManagePlayersScreen> {
       if (playerName.isNotEmpty) {
         // Check if the player already exists in the database by name
         Player? existingPlayer =
-            await DatabaseHelper.instance.getPlayerByName(playerName);
+            await DatabaseHelper().getPlayerByName(playerName);
 
         if (existingPlayer == null) {
           // Player does not exist, so insert them into the database
           Player newPlayer =
               Player(name: playerName, isAvailable: true);
-          await DatabaseHelper.instance.insertPlayer(newPlayer);
+          await DatabaseHelper().insertPlayer(newPlayer);
           print("Inserted player: $playerName");
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -61,7 +61,7 @@ class _ManagePlayersScreenState extends State<ManagePlayersScreen> {
 
   // Fetch players from the database
   void loadPlayers() async {
-    List<Player> playerList = await DatabaseHelper.instance.getAllPlayers()
+    List<Player> playerList = await DatabaseHelper().getAllPlayers()
         .then((data) => data.map((player) => Player.fromMap(player)).toList());
     print("Players loaded: $playerList"); // Debugging line
     setState(() {
@@ -85,7 +85,7 @@ class _ManagePlayersScreenState extends State<ManagePlayersScreen> {
       );
 
       if (playerToDelete != null && playerToDelete.id != null) {
-        await DatabaseHelper.instance.deletePlayer(playerToDelete.id!);
+        await DatabaseHelper().deletePlayer(playerToDelete.id!);
         setState(() {
           playerControllers.removeAt(index); // Remove from the list
           players.removeAt(index); // Remove from the players list
