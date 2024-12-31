@@ -1,6 +1,7 @@
   import 'package:pavilion_scorefy/database/players_model.dart';
 
   class ScoreboardScreenData {
+    final String? matchId;
     final String teamA;
     final String teamB;
     final int overs;
@@ -14,6 +15,7 @@
     final String? selectedBowler;
 
     ScoreboardScreenData({
+      this.matchId,
       required this.teamA,
       required this.teamB,
       required this.overs,

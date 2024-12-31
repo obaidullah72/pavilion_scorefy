@@ -55,7 +55,6 @@ class DatabaseHelper {
 
     // Uncomment this line temporarily to force delete the old database (for testing purposes)
     // await deleteDatabase(path); // Deletes the database for a fresh start
-
     // Open the database and create tables if they don't exist
     return await openDatabase(
       path,
@@ -101,7 +100,7 @@ class DatabaseHelper {
     extras INTEGER,
     batters TEXT,
     bowlers TEXT,
-    ismatchongoing INTEGER
+    ismatchongoing TEXT
   )
 ''');
 
@@ -165,8 +164,8 @@ class DatabaseHelper {
     final db = await database;
     final maps = await db.query(
       'matches',
-      where: 'isMatchOngoing = ?',
-      whereArgs: [1],
+      where: 'ismatchongoing = ?',
+      whereArgs: [1],  // Changed to string 'true' since you stored it as a string
     );
     if (maps.isNotEmpty) {
       return MatchModel.fromMap(maps.first);
@@ -198,6 +197,27 @@ class DatabaseHelper {
         conflictAlgorithm: ConflictAlgorithm.replace);
   }
 
+  // Fetch all match records from the database
+  Future<List<Map<String, dynamic>>> getAllMatches() async {
+    final db = await database;
+    return await db.query('matches');
+  }
+
+
+  Future<MatchModel?> fetchMatchById(int matchId) async {
+    final db = await _database;
+    final List<Map<String, dynamic>> maps = await db!.query(
+      'matches',
+      where: 'id = ?',
+      whereArgs: [matchId],
+    );
+
+    if (maps.isNotEmpty) {
+      return MatchModel.fromMap(maps.first);
+    }
+    return null;
+  }
+
 // Fetch match data from the database
   Future<List<Map<String, dynamic>>> fetchMatchData() async {
     Database db = await database;
@@ -209,18 +229,18 @@ class DatabaseHelper {
   }
 
   // Fetch match by id
-  Future<Map<String, dynamic>?> fetchMatchById(int id) async {
-    Database db = await database;
-    var result =
-        await db.query('matches', where: '$columnId = ?', whereArgs: [id]);
-
-    if (result.isNotEmpty) {
-      return Map<String, dynamic>.from(
-          result.first); // Ensure casting to Map<String, dynamic>
-    } else {
-      return null; // Return null if no match is found
-    }
-  }
+  // Future<Map<String, dynamic>?> fetchMatchById(int id) async {
+  //   Database db = await database;
+  //   var result =
+  //       await db.query('matches', where: '$columnId = ?', whereArgs: [id]);
+  //
+  //   if (result.isNotEmpty) {
+  //     return Map<String, dynamic>.from(
+  //         result.first); // Ensure casting to Map<String, dynamic>
+  //   } else {
+  //     return null; // Return null if no match is found
+  //   }
+  // }
 
   // Future<List<Map<String, dynamic>>> fetchOngoingMatch() async {
   //   final db = await database;

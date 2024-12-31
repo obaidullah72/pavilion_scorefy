@@ -1,44 +1,68 @@
 import 'package:sqflite/sqflite.dart';
 
 class MatchModel {
-  int id;
-  String teamA;
-  String teamB;
-  int overs;
-  int currentOver;
-  bool isMatchOngoing;
+  final int id;
+  final String teamA;
+  final String teamB;
+  final int overs;
+  final int players;
+  final int score;
+  final int wickets;
+  final int extras;
+  final String batters;
+  final String bowlers;
+  final String isMatchOngoing;
 
   MatchModel({
     required this.id,
     required this.teamA,
     required this.teamB,
     required this.overs,
-    required this.currentOver,
+    required this.players,
+    required this.score,
+    required this.wickets,
+    required this.extras,
+    required this.batters,
+    required this.bowlers,
     required this.isMatchOngoing,
   });
 
+  // Convert Map to MatchModel object
+  factory MatchModel.fromMap(Map<String, dynamic> map) {
+    return MatchModel(
+      id: map['id'],
+      teamA: map['teamA'],
+      teamB: map['teamB'],
+      overs: map['overs'],
+      players: map['players'],
+      score: map['score'],
+      wickets: map['wickets'],
+      extras: map['extras'],
+      batters: map['batters'],
+      bowlers: map['bowlers'],
+      isMatchOngoing: map['ismatchongoing'],
+    );
+  }
+
+  // Convert MatchModel object to Map
   Map<String, dynamic> toMap() {
     return {
       'id': id,
       'teamA': teamA,
       'teamB': teamB,
       'overs': overs,
-      'currentOver': currentOver,
-      'isMatchOngoing': isMatchOngoing ? 1 : 0,
+      'players': players,
+      'score': score,
+      'wickets': wickets,
+      'extras': extras,
+      'batters': batters,
+      'bowlers': bowlers,
+      'ismatchongoing': isMatchOngoing,
     };
   }
-
-  static MatchModel fromMap(Map<String, dynamic> map) {
-    return MatchModel(
-      id: map['id'],
-      teamA: map['teamA'],
-      teamB: map['teamB'],
-      overs: map['overs'],
-      currentOver: map['currentOver'],
-      isMatchOngoing: map['isMatchOngoing'] == 1,
-    );
-  }
 }
+
+
 
 class PlayerStats {
   String name;

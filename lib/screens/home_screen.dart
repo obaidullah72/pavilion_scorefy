@@ -12,6 +12,7 @@ import 'package:pavilion_scorefy/screens/widget/datadialog.dart';
 import '../database/db_helper.dart';
 import '../database/players_model.dart';
 import '../database/scoreboard_model.dart';
+import '../database/team_model.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -22,46 +23,116 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   MatchModel? ongoingMatch;
+  List<Team> teams = [];
   bool isMatchOngoing = false;
-
+  int overs = 1;
+  int players = 2;
+  String? selectedTeamA;
+  String? selectedTeamB;
+  String? selectedBatter1; // Track selected batter 1
+  String? selectedBatter2; // Track selected batter 2
+  String? selectedBowler;
 
   @override
   void initState() {
-    // TODO: implement initState
     super.initState();
     _loadOngoingMatch();
   }
 
-  Future<void> _loadOngoingMatch() async {
+  void _loadOngoingMatch() async {
+    // Fetch the match as a map
+    // final matchMap = await DatabaseHelper().fetchOngoingMatch();
     final match = await DatabaseHelper().fetchOngoingMatch();
-    if (match != null) {
-      setState(() {
-        isMatchOngoing = true;
-        ongoingMatch = match;
-      });
+    setState(() {
+      ongoingMatch = match;
+    });
+    // Ensure the map is converted to a MatchModel
+    // setState(() {
+    //   ongoingMatch = MatchModel.fromMap(matchMap as Map<String, dynamic>); // Convert the map to MatchModel
+    // });
+
+    if (ongoingMatch != null) {
+      print("Ongoing Match Loaded: ");
+      print("Match ID: ${ongoingMatch!.id}");
+      print("Team A: ${ongoingMatch!.teamA}");
+      print("Team B: ${ongoingMatch!.teamB}");
+      print("Overs: ${ongoingMatch!.overs}");
+      print("Players: ${ongoingMatch!.players}");
+      print("Target: ${ongoingMatch!.score}");
+      print("Wickets: ${ongoingMatch!.wickets}");
+      print("Extras: ${ongoingMatch!.extras}");
+      print("Batters: ${ongoingMatch!.batters}");
+      print("Bowlers: ${ongoingMatch!.bowlers}");
+      print("Match On Going: ${ongoingMatch!.isMatchOngoing}");
+    } else {
+      print("No ongoing match found.");
     }
   }
 
-  void _resumeMatch() {
+  void _resumeMatch() async {
     if (ongoingMatch != null) {
-      // Navigate to Scoreboard screen with match data
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => ScoreboardScreen(
-            data: ScoreboardScreenData(
-              teamA: ongoingMatch!.teamA,
-              teamB: ongoingMatch!.teamB,
-              overs: ongoingMatch!.overs,
-              players: 11, // Adjust dynamically
-              teamALogo: 'assets/logo.png',
-              teamBLogo: 'assets/logo.png',
-              playersTeamA: [], // Fetch from DB
-              playersTeamB: [], // Fetch from DB
+      final match = ongoingMatch!; // Use the ongoing match details
+
+      // Fetch match details using the match id from the database
+      final dbHelper = DatabaseHelper();
+      final matchDetails = await dbHelper.fetchMatchById(match.id);
+
+      if (matchDetails != null) {
+        // Use the fetched team names from match details
+        String teamAName = matchDetails.teamA; // Use key to access the value
+        String teamBName = matchDetails.teamB; // Use key to access the value
+
+        // Fetch the actual team objects based on the team names
+        // Team teamA = teams.firstWhere(
+        //   (team) => team.teamName == teamAName,
+        //   orElse: () =>
+        //       Team(id: -1, teamName: 'Unknown', logo: 'assets/team.jpg'),
+        // );
+        //
+        // Team teamB = teams.firstWhere(
+        //   (team) => team.teamName == teamBName,
+        //   orElse: () =>
+        //       Team(id: -1, teamName: 'Unknown', logo: 'assets/team.jpg'),
+        // );
+        //
+        // // Check if both teams were found and are valid
+        // if (teamA.id != -1 && teamB.id != -1) {
+        //   final playersTeamA = await dbHelper
+        //       .getPlayersByTeamId(teamA.id!); // Fetch players of Team A
+        //   final playersTeamB = await dbHelper
+        //       .getPlayersByTeamId(teamB.id!); // Fetch players of Team B
+
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => ScoreboardScreen(
+                database: dbHelper,
+                data: ScoreboardScreenData(
+                  matchId: match.id.toString(),
+                  // Pass the ongoing match ID
+                  teamA: teamAName,
+                  teamB: teamBName,
+                  overs: match.overs,
+                  players: match.players,
+                  teamALogo: 'assets/logo.png',
+                  teamBLogo: 'assets/logo.png',
+                  playersTeamA: playersTeamA,
+                  playersTeamB: playersTeamB,
+                  selectedBatter1: selectedBatter1,
+                  selectedBatter2: selectedBatter2,
+                  selectedBowler: selectedBowler,
+                ),
+              ),
             ),
-          ),
-        ),
-      );
+          );
+        // } else {
+        //   print("Could not find the teams or team names.");
+        // }
+      } else {
+        print("No match details found for match ID ${match.id}");
+      }
+    } else {
+      print("No ongoing match to resume.");
     }
   }
 
@@ -88,6 +159,14 @@ class _HomeScreenState extends State<HomeScreen> {
           padding: const EdgeInsets.all(16.0),
           child: Column(
             children: [
+              Align(
+                alignment: Alignment.topRight,
+                child: IconButton(
+                  style: ElevatedButton.styleFrom(),
+                  onPressed: _loadOngoingMatch,
+                  icon: Icon(Icons.download, color: Colors.green),
+                ),
+              ),
               SizedBox(
                 height: 50,
               ),
@@ -113,13 +192,11 @@ class _HomeScreenState extends State<HomeScreen> {
               const SizedBox(height: 16),
 
               // Resume Match Button
-              // Conditional button for "Resume Match" or "New Match"
-              isMatchOngoing
-                  ? ElevatedButton(
-                onPressed: () => _resumeMatch(),
+              ElevatedButton(
+                onPressed: ongoingMatch != null ? () => _resumeMatch() : null,
                 style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(
-                      vertical: 16, horizontal: 100),
+                  padding:
+                      const EdgeInsets.symmetric(vertical: 16, horizontal: 100),
                   backgroundColor: Colors.white,
                   side: const BorderSide(color: Colors.green),
                   shape: RoundedRectangleBorder(
@@ -134,48 +211,17 @@ class _HomeScreenState extends State<HomeScreen> {
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-              )
-                  : ElevatedButton(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => CreateMatchScreen(),
-                    ),
-                  );
-                },
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(
-                      vertical: 16, horizontal: 100),
-                  backgroundColor: Colors.white,
-                  side: const BorderSide(color: Colors.green),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-                child: const Text(
-                  'NEW MATCH',
-                  style: TextStyle(
-                    color: Colors.green,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
               ),
-
 
               const SizedBox(height: 20),
 
               // Grid Menu Options
               GridView.count(
                 crossAxisCount: 3,
-                // 3 columns
                 crossAxisSpacing: 12,
                 mainAxisSpacing: 12,
                 physics: NeverScrollableScrollPhysics(),
-                // Disable GridView scrolling
                 shrinkWrap: true,
-                // Let the GridView take only as much space as needed
                 children: [
                   _buildGridItem(
                     icon: Icons.sports_cricket,
@@ -199,12 +245,6 @@ class _HomeScreenState extends State<HomeScreen> {
                     },
                     color: Colors.red,
                   ),
-                  // _buildGridItem(
-                  //   icon: Icons.upload_file,
-                  //   label: 'Load Tournament',
-                  //   onTap: () {},
-                  //   color: Colors.blue,
-                  // ),
                   _buildGridItem(
                     icon: Icons.group,
                     label: 'Manage Teams',
@@ -246,7 +286,6 @@ class _HomeScreenState extends State<HomeScreen> {
                           context,
                           MaterialPageRoute(
                               builder: (context) => TeamStandingsScreen()));
-
                     },
                     color: Colors.deepPurple,
                   ),
@@ -254,28 +293,26 @@ class _HomeScreenState extends State<HomeScreen> {
                     icon: Icons.sports_score,
                     label: 'Career Mode',
                     onTap: _showCareerModeDialog,
-                    // Show dialog on tap
                     color: Colors.green,
                     pro: true,
                   ),
                   _buildGridItem(
                     icon: Icons.backup,
                     label: 'Backup Data',
-                    onTap: () => showManageDataDialog(context), // Call Manage Data dialog here
+                    onTap: () => showManageDataDialog(context),
                     color: Colors.pink,
                   ),
                 ],
               ),
               SizedBox(
                 height: 150,
-              )
+              ),
             ],
           ),
         ),
       ),
     );
   }
-
 
   // Function to show the Career Mode confirmation dialog
   void _showCareerModeDialog() {
@@ -291,7 +328,6 @@ class _HomeScreenState extends State<HomeScreen> {
               child: TextButton(
                 onPressed: () {
                   Navigator.of(context).pop();
-                  // Add logic here if user confirms (e.g., switch to basic version)
                 },
                 child: const Text("Yes", style: TextStyle(color: Colors.white)),
                 style: TextButton.styleFrom(

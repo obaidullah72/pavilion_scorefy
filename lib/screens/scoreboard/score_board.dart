@@ -9,6 +9,7 @@ import 'package:pavilion_scorefy/screens/scoreboard/widgets/playerstats.dart';
 import 'package:pavilion_scorefy/screens/scoreboard/widgets/score_input_board.dart';
 import 'package:pavilion_scorefy/screens/scoreboard/widgets/scoreboard_output.dart';
 import '../../database/db_helper.dart';
+import '../../database/match_model.dart';
 import '../../database/scoreboard_model.dart';
 
 class ScoreboardScreen extends StatefulWidget {
@@ -243,6 +244,8 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
     );
   }
   void _updateBalls({bool countBall = true}) {
+    if (!countBall || inningsEnded) return; // Prevent ball update if innings ended
+
     if (countBall) {
       setState(() {
         balls += 1;
@@ -470,10 +473,10 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
 
     if (currentInning == 1) {
       message =
-          'The first innings has ended with a score of $score/$wickets by team $teamA!';
+      'The first innings has ended with a score of $score/$wickets by team $teamA!';
     } else {
       message =
-          'The second innings has ended with a score of $score/$wickets by team $teamB!';
+      'The second innings has ended with a score of $score/$wickets by team $teamB!';
     }
 
     showDialog(
@@ -491,11 +494,9 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
               Navigator.of(context).pop();
               if (currentInning == 1) {
                 _resetInnings(); // Prepare for next innings
-                _endOver(score);
-                // _saveMatchData();
+                _endOver(score); // End the over properly
               } else {
                 _showMatchEndDialog(); // End the match after second innings
-                _saveMatchData();
               }
             },
             child: Text(
@@ -507,9 +508,9 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
       ),
     );
   }
-  void _endOver(int runs) {
-    // Assuming you want to calculate the total runs for the over
 
+
+  void _endOver(int runs) {
     // Update the score with the calculated over runs
     _updateScore(runs);
 
@@ -607,9 +608,41 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
       inningsEnded = false;
     });
   }
+  MatchModel? ongoingMatch;
+
+// Function to load ongoing match
+  void _loadOngoingMatch() async {
+    final match = await DatabaseHelper().fetchOngoingMatch();
+    setState(() {
+      ongoingMatch = match;
+    });
+
+    if (ongoingMatch != null) {
+      print("Ongoing Match Loaded: ");
+      print("Team A: ${ongoingMatch!.teamA}");
+      print("Team B: ${ongoingMatch!.teamB}");
+      print("Overs: ${ongoingMatch!.overs}");
+      print("Players: ${ongoingMatch!.players}");
+      print("Target: ${ongoingMatch!.score}");
+      print("Wickets: ${ongoingMatch!.wickets}");
+      print("Extras: ${ongoingMatch!.extras}");
+      print("Batters: ${ongoingMatch!.batters}");
+      print("Bowlers: ${ongoingMatch!.bowlers}");
+      print("Match On Going: ${ongoingMatch!.isMatchOngoing}");
+    } else {
+      print("No ongoing match found.");
+    }
+  }
+
 
   void _saveMatchData() {
     try {
+      // Convert the batters and bowlers lists to JSON strings for storage
+      String battersJson = jsonEncode(batters);
+      String bowlersJson = jsonEncode(bowlers);
+
+      String matchongoing = 'true';
+      // Convert boolean or other types to supported types (e.g., int for boolean)
       final matchData = {
         'teamA': teamA,
         'teamB': teamB,
@@ -618,10 +651,11 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
         'score': targetScore,
         'wickets': wickets,
         'extras': extras,
-        'batters': batters.toString(),
-        'bowlers': bowlers.toString(),
+        'batters': battersJson,  // Store as a JSON string
+        'bowlers': bowlersJson,  // Store as a JSON string
+        'ismatchongoing': matchongoing,
       };
-      // int scoreruns = targetScore - 1;
+
       // Print the match data to the console
       print("Saving Match Data: ");
       print("Team A: $teamA");
@@ -631,11 +665,32 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
       print("Target: $targetScore");
       print("Wickets: $wickets");
       print("Extras: $extras");
-      print("Batters: ${batters.toString()}");
-      print("Bowlers: ${bowlers.toString()}");
+      print("Batters: $battersJson");
+      print("Bowlers: $bowlersJson");
+      print("MatchOnGoing: $matchongoing");
 
+      // Save match data to the database
       DatabaseHelper().saveMatchData(matchData).then((id) {
         print("Match saved with id $id");
+
+        // Fetch and print all saved matches
+        DatabaseHelper().getAllMatches().then((matches) {
+          print("All saved matches:");
+          for (var match in matches) {
+            print("Match ID: ${match['id']}");
+            print("Team A: ${match['teamA']}");
+            print("Team B: ${match['teamB']}");
+            print("Overs: ${match['overs']}");
+            print("Players: ${match['players']}");
+            print("Target: ${match['score']}");
+            print("Wickets: ${match['wickets']}");
+            print("Extras: ${match['extras']}");
+            print("Batters: ${match['batters']}");
+            print("Bowlers: ${match['bowlers']}");
+            print("Match On Going: ${match['ismatchongoing']}");
+            print("-----------");
+          }
+        });
       });
     } catch (e) {
       print("Error saving match data: $e");
@@ -643,29 +698,30 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
   }
 
 
-  Future<void> _loadMatchData() async {
-    try {
-      List<Map<String, dynamic>> matchList = await DatabaseHelper().fetchMatchData();
-      if (matchList.isNotEmpty) {
-        var match = matchList.first;
-        setState(() {
-          // Load match data from the fetched list
-          teamA = match['teamA'];
-          teamB = match['teamB'];
-          overs = match['overs'];
-          players = match['players'];
-          score = match['score'];
-          wickets = match['wickets'];
-          extras = match['extras'];
-          batters = _parsePlayerStats(match['batters']);
-          bowlers = _parsePlayerStats(match['bowlers']);
-          isMatchOngoing = match['ismatchongoing']; // Load match ongoing status
-        });
-      }
-    } catch (e) {
-      print("Error loading match data: $e");
-    }
-  }
+
+  // Future<void> _loadMatchData() async {
+  //   try {
+  //     List<Map<String, dynamic>> matchList = await DatabaseHelper().fetchMatchData();
+  //     if (matchList.isNotEmpty) {
+  //       var match = matchList.first;
+  //       setState(() {
+  //         // Load match data from the fetched list
+  //         teamA = match['teamA'];
+  //         teamB = match['teamB'];
+  //         overs = match['overs'];
+  //         players = match['players'];
+  //         score = match['score'];
+  //         wickets = match['wickets'];
+  //         extras = match['extras'];
+  //         batters = _parsePlayerStats(match['batters']);
+  //         bowlers = _parsePlayerStats(match['bowlers']);
+  //         isMatchOngoing = match['ismatchongoing']; // Load match ongoing status
+  //       });
+  //     }
+  //   } catch (e) {
+  //     print("Error loading match data: $e");
+  //   }
+  // }
 
 
   List<Map<String, dynamic>> _parsePlayerStats(String stats) {
@@ -710,7 +766,7 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
   @override
   void initState() {
     super.initState();
-    _loadMatchData();
+    // _loadMatchData();
     teamA = widget.data.teamA;
     teamB = widget.data.teamB;
     overs = widget.data.overs;
@@ -828,6 +884,9 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
                 ],
               ),
             ),
+
+
+
             Column(
               children: [
                 ScoreboardWidget(
