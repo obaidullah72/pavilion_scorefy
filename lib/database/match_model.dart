@@ -62,8 +62,6 @@ class MatchModel {
   }
 }
 
-
-
 class PlayerStats {
   String name;
   int runs;
